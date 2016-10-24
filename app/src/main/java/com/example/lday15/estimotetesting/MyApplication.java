@@ -6,16 +6,20 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.nfc.Tag;
+import android.util.Log;
 
 
 import com.estimote.sdk.Beacon;
 import com.estimote.sdk.BeaconManager;
 import com.estimote.sdk.Region;
 import com.estimote.sdk.connection.internal.protocols.Operation;
+import com.estimote.sdk.connection.settings.Eddystone;
 
 
 import java.util.List;
 import java.util.UUID;
+
 
 /**
  * Created by lday15 on 10/10/2016.
@@ -23,15 +27,23 @@ import java.util.UUID;
 
 public class MyApplication extends Application {
 
-    private BeaconManager beaconManager;
+    private BeaconManager beaconManager = new BeaconManager(Context);
+    private String scanId;
 
+
+    beaconManager.setEddystoneListener(new beaconManager.EddystoneListener() {
+        @Override public void onEddystonesFound(List<Eddystone> eddystones)
+        {
+            Log.d(TAG, "Nearby Eddystone Beacons: " + eddystones);
+        }
+
+    });
 
     @Override
     public void onCreate() {
         super.onCreate();
 
         beaconManager = new BeaconManager(getApplicationContext());
-
 
         beaconManager.connect(new BeaconManager.ServiceReadyCallback() {
             @Override
@@ -45,39 +57,5 @@ public class MyApplication extends Application {
         });
 
     }
+        }
 
-    public void showNotification(String title, String message) {
-        Intent notifyIntent = new Intent(this, MainActivity.class);
-        notifyIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PendingIntent pendingIntent = PendingIntent.getActivities(this, 0,
-                new Intent[]{notifyIntent}, PendingIntent.FLAG_UPDATE_CURRENT);
-        Operation.Notification notification = (Operation.Notification) new Notification.Builder(this)
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle(title)
-                .setContentText(message)
-                .setAutoCancel(true)
-                .setContentIntent(pendingIntent)
-                .build();
-        notification.defaults |= Notification.DEFAULT_SOUND;
-        NotificationManager notificationManager =
-                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        notificationManager.notify(1, (Notification) notification);
-
-
-        beaconManager.setMonitoringListener(new BeaconManager.MonitoringListener() {
-            @Override
-            public void onEnteredRegion(Region region, List<Beacon> list) {
-                showNotification(
-                        "Your gate closes in 47 minutes.",
-                        "Current security wait time is 15 minutes, "
-                                + "and it's a 5 minute walk from security to the gate. "
-                                + "Looks like you've got plenty of time!");
-            }
-
-            @Override
-            public void onExitedRegion(Region region) {
-                // could add an "exit" notification too if you want (-:
-            }
-        });
-    }
-}
